@@ -11,15 +11,22 @@ export default function ProductCard({
 
   return (
     <article className="card product-card">
-      <div className="product-card__header">
-        <span className="pill">{product.category}</span>
-        <span className={`status-badge ${outOfStock ? "status-badge--cancelled" : ""}`}>
-          {outOfStock ? "Out of stock" : "Available"}
-        </span>
-      </div>
+      {product.imageUrl && (
+        <div className="product-card__image">
+          <img src={product.imageUrl} alt={product.name} />
+        </div>
+      )}
+      
+      <div className="product-card__content">
+        <div className="product-card__header">
+          <span className="pill">{product.category}</span>
+          <span className={`status-badge ${outOfStock ? "status-badge--cancelled" : ""}`}>
+            {outOfStock ? "Out of stock" : "Available"}
+          </span>
+        </div>
 
-      <h3>{product.name}</h3>
-      <p className="muted">{product.description || "Fresh produce listed directly by the farmer."}</p>
+        <h3>{product.name}</h3>
+        <p className="muted">{product.description || "Fresh produce listed directly by the farmer."}</p>
 
       <div className="meta-grid">
         <span>Price: {formatCurrency(product.pricePaise)}</span>
@@ -48,6 +55,7 @@ export default function ProductCard({
             </button>
           </>
         )}
+      </div>
       </div>
     </article>
   );

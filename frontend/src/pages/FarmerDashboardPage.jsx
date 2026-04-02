@@ -71,6 +71,25 @@ export default function FarmerDashboardPage() {
     }));
   };
 
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image size should be less than 5MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((current) => ({
+          ...current,
+          imageUrl: reader.result,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+
   const resetForm = () => {
     setFormData(emptyForm);
     setEditingProduct(null);
@@ -285,14 +304,33 @@ export default function FarmerDashboardPage() {
                 />
               </label>
 
-              <label>
-                <span>Image URL</span>
-                <input
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleInputChange}
-                  placeholder="Optional image link"
-                />
+              <label className="image-upload-label">
+                <span>Product Image (Camera / Gallery)</span>
+                <div className="file-input-wrapper">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageUpload}
+                    className="file-input"
+                  />
+                  <div className="file-input-button">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    <span>Tap to Upload or Take Photo</span>
+                  </div>
+                </div>
+                {formData.imageUrl && (
+                  <div className="image-preview">
+                    <img src={formData.imageUrl} alt="Product Preview" />
+                    <button 
+                      type="button" 
+                      className="btn btn--danger btn--small" 
+                      onClick={() => setFormData(f => ({ ...f, imageUrl: "" }))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </label>
 
               <label className="checkbox-row">

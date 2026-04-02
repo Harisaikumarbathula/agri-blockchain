@@ -20,7 +20,8 @@ export default function Navbar() {
       </div>
 
       <nav className="navbar__links">
-        <NavLink to="/marketplace">Marketplace</NavLink>
+        {isAuthenticated && <NavLink end to="/">Home</NavLink>}
+        {isAuthenticated && <NavLink to="/marketplace">Marketplace</NavLink>}
 
         {user?.role === "buyer" && <NavLink to="/cart">Cart ({cartCount})</NavLink>}
         {user?.role === "buyer" && <NavLink to="/buyer/orders">Buyer Orders</NavLink>}

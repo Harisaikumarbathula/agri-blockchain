@@ -10,14 +10,18 @@ import BuyerOrdersPage from "./pages/BuyerOrdersPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 
+import LandingPage from "./pages/LandingPage";
+
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
-        <Route index element={<Navigate to="/marketplace" replace />} />
+        <Route index element={<LandingPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
-        <Route path="marketplace" element={<MarketplacePage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="marketplace" element={<MarketplacePage />} />
+        </Route>
 
         <Route element={<ProtectedRoute roles={["buyer"]} />}>
           <Route path="cart" element={<CartPage />} />

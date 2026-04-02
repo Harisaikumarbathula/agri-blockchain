@@ -15,6 +15,7 @@ export default function RegisterPage() {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     role: "buyer",
   });
   const [error, setError] = useState("");
@@ -27,6 +28,11 @@ export default function RegisterPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match. Please try again.");
+      return;
+    }
 
     try {
       const user = await registerUser(formData);
@@ -83,6 +89,19 @@ export default function RegisterPage() {
               value={formData.password}
               onChange={handleChange}
               placeholder="Minimum 6 characters"
+              required
+              minLength={6}
+            />
+          </label>
+
+          <label>
+            <span>Confirm Password</span>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="Confirm your password"
               required
               minLength={6}
             />
