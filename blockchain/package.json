@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "ganache": "ganache --server.port 7545 --chain.chainId 1337 --chain.networkId 1337 --wallet.mnemonic \"test test test test test test test test test test test junk\" --wallet.totalAccounts 10",
+    "ganache": "ganache --server.port 7545 --chain.chainId 1337 --chain.networkId 1337 --wallet.mnemonic \"test test test test test test test test test test test junk\" --wallet.totalAccounts 10 --db ./ganache-db",
     "compile": "truffle compile",
     "migrate": "truffle migrate --network development",
     "reset": "truffle migrate --reset --network development",

@@ -116,6 +116,12 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error("Product, quantity, and payment method are required.");
   }
 
+  const numericQuantity = Number(quantity);
+  if (Number.isNaN(numericQuantity) || numericQuantity <= 0) {
+    res.status(400);
+    throw new Error("Quantity must be a valid positive number.");
+  }
+
   if (!["upi", "cod"].includes(paymentMethod)) {
     res.status(400);
     throw new Error("Payment method must be UPI or COD.");
@@ -127,24 +133,33 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error("Product is not available.");
   }
 
-  if (Number(quantity) > Number(product.quantity)) {
+  if (numericQuantity > Number(product.quantity)) {
     res.status(400);
     throw new Error("Requested quantity exceeds the available stock.");
   }
 
   const orderNumber = await generateOrderNumber(Order);
-  const totalPaise = Number(product.pricePaise) * Number(quantity);
+  const totalPaise = Number(product.pricePaise) * numericQuantity;
   const paymentReference =
     paymentMethod === "upi" ? generatePaymentReference(orderNumber, "UPI") : "";
 
-  const blockchainResult = await recordOrder({
-    orderNumber,
-    productBlockchainId: product.blockchainId,
-    quantity: Number(quantity),
-    totalPaise,
-    paymentMethod,
-    paymentStatus: "pending",
-  });
+  let blockchainResult;
+  try {
+    blockchainResult = await recordOrder({
+      orderNumber,
+      productBlockchainId: product.blockchainProductId,
+      quantity: Number(quantity),
+      totalPaise,
+      paymentMethod,
+      paymentStatus: "pending",
+    });
+  } catch (error) {
+    if (error.message.includes("Product not found") || error.message.includes("revert")) {
+      res.status(500);
+      throw new Error("Blockchain sync error: Product not found on the blockchain. Please try again later while the system resyncs.");
+    }
+    throw error;
+  }
 
   product.quantity = Number(product.quantity) - Number(quantity);
   product.isAvailable = product.quantity > 0 && product.isAvailable;
@@ -156,6 +171,7 @@ const createOrder = asyncHandler(async (req, res) => {
     buyerId: req.user._id,
     farmerId: product.farmerId,
     productId: product._id,
+    blockchainProductId: product.blockchainProductId,
     quantity: Number(quantity),
     totalPaise,
     platformFeePaise: Math.floor(totalPaise * 0.2),

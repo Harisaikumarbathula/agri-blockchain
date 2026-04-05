@@ -22,6 +22,10 @@ const orderSchema = new mongoose.Schema(
       ref: "Product",
       required: true,
     },
+    blockchainProductId: {
+      type: Number,
+      required: true,
+    },
     quantity: {
       type: Number,
       required: true,
@@ -60,7 +64,6 @@ const orderSchema = new mongoose.Schema(
     blockchainOrderId: {
       type: Number,
       required: true,
-      unique: true,
     },
     blockchainRefs: {
       orderCreated: {

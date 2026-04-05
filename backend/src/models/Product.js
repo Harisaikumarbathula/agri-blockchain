@@ -62,10 +62,11 @@ const productSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-    blockchainId: {
+    blockchainProductId: {
       type: Number,
       required: true,
       unique: true,
+      index: true,
     },
     blockchainTxHash: {
       type: String,

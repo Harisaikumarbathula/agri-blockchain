@@ -82,6 +82,19 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new Error("Name, category, quantity, unit, price, origin, and harvest date are required.");
   }
 
+  const numericQuantity = Number(quantity);
+  const numericPricePaise = Number(pricePaise);
+
+  if (Number.isNaN(numericQuantity) || numericQuantity < 0) {
+    res.status(400);
+    throw new Error("Quantity must be a valid positive number.");
+  }
+
+  if (Number.isNaN(numericPricePaise) || numericPricePaise <= 0) {
+    res.status(400);
+    throw new Error("Price must be a valid positive number.");
+  }
+
   const batchCode = generateBatchCode(name);
   const harvestDateValue = toHarvestDate(harvestDate);
 
@@ -89,7 +102,7 @@ const createProduct = asyncHandler(async (req, res) => {
     name,
     category,
     unit,
-    quantity: Number(quantity),
+    quantity: numericQuantity,
     batchCode,
     originLocation,
     harvestDateUnix: toHarvestDateUnix(harvestDate),
@@ -99,16 +112,16 @@ const createProduct = asyncHandler(async (req, res) => {
     farmerId: req.user._id,
     name,
     category,
-    quantity: Number(quantity),
+    quantity: numericQuantity,
     unit,
-    pricePaise: Number(pricePaise),
+    pricePaise: numericPricePaise,
     currency: "INR",
     batchCode,
     originLocation,
     harvestDate: harvestDateValue,
     description: description || "",
     imageUrl: imageUrl || "",
-    blockchainId: blockchainResult.blockchainId,
+    blockchainProductId: blockchainResult.blockchainId,
     blockchainTxHash: blockchainResult.receipt.transactionHash,
     lastBlockchainTxHash: blockchainResult.receipt.transactionHash,
     isAvailable: true,
@@ -131,12 +144,15 @@ const updateProductById = asyncHandler(async (req, res) => {
     throw new Error("You can only update your own products.");
   }
 
+  const rawQuantity = req.body.quantity ?? product.quantity;
+  const rawPricePaise = req.body.pricePaise ?? product.pricePaise;
+
   const nextValues = {
     name: req.body.name ?? product.name,
     category: req.body.category ?? product.category,
-    quantity: Number(req.body.quantity ?? product.quantity),
+    quantity: Number(rawQuantity),
     unit: req.body.unit ?? product.unit,
-    pricePaise: Number(req.body.pricePaise ?? product.pricePaise),
+    pricePaise: Number(rawPricePaise),
     description: req.body.description ?? product.description,
     imageUrl: req.body.imageUrl ?? product.imageUrl,
     originLocation: req.body.originLocation ?? product.originLocation,
@@ -144,8 +160,18 @@ const updateProductById = asyncHandler(async (req, res) => {
     isAvailable: req.body.isAvailable ?? product.isAvailable,
   };
 
+  if (Number.isNaN(nextValues.quantity) || nextValues.quantity < 0) {
+    res.status(400);
+    throw new Error("Quantity must be a valid positive number.");
+  }
+
+  if (Number.isNaN(nextValues.pricePaise) || nextValues.pricePaise <= 0) {
+    res.status(400);
+    throw new Error("Price must be a valid positive number.");
+  }
+
   const blockchainResult = await updateProduct({
-    blockchainId: product.blockchainId,
+    blockchainId: product.blockchainProductId,
     name: nextValues.name,
     category: nextValues.category,
     unit: nextValues.unit,
@@ -187,7 +213,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
     throw new Error("You can only remove your own products.");
   }
 
-  const blockchainResult = await deactivateProduct(product.blockchainId);
+  const blockchainResult = await deactivateProduct(product.blockchainProductId);
 
   product.isAvailable = false;
   product.lastBlockchainTxHash = blockchainResult.receipt.transactionHash;

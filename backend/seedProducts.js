@@ -48,7 +48,7 @@ async function seed() {
         if (!resProduct.ok) {
            console.error(`Failed to add product ${i}:`, productData.message || productData);
         } else {
-           console.log(`Product ${i} added. Blockchain ID: ${productData.product.blockchainId}`);
+           console.log(`Product ${i} added. Blockchain ID: ${productData.product.blockchainProductId}`);
         }
     }
     console.log("Seeding complete!");
