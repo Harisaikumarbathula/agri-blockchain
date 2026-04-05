@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import api from "../api/client";
 import ProductCard from "../components/ProductCard";
 import OrderTimeline from "../components/OrderTimeline";
@@ -166,10 +167,11 @@ export default function FarmerDashboardPage() {
       const { data } = await api.put(`/orders/${order._id}/status`, {
         status: nextStatus,
       });
-      setMessage(data.message);
+      toast.success(data.message);
       await loadDashboard();
     } catch (actionError) {
       setError(extractErrorMessage(actionError));
+      toast.error(extractErrorMessage(actionError));
     }
   };
 
@@ -379,8 +381,9 @@ export default function FarmerDashboardPage() {
             {orders.length === 0 ? (
               <div className="empty-state">No orders received yet.</div>
             ) : (
-              orders.map((order) => (
-                <div key={order._id} className="order-card">
+              orders.map((order) => {
+                return (
+                  <div key={order._id} className="order-card">
                   <div className="order-card__header">
                     <div>
                       <strong>{order.orderNumber}</strong>
@@ -408,25 +411,36 @@ export default function FarmerDashboardPage() {
                     <code>{shortenHash(order.blockchainRefs?.orderCreated)}</code>
                   </div>
 
-                  <div className="card__actions">
-                    {order.status === "pending" && (
-                      <button
-                        className="btn btn--primary"
-                        onClick={() => handleOrderAction(order, "confirmed")}
-                        disabled={order.paymentMethod === "upi" && order.paymentStatus !== "paid"}
-                      >
-                        Confirm Order
-                      </button>
-                    )}
+                    <div className="card__actions">
+                      {order.status === "pending" && (
+                        <button
+                          className="btn btn--primary"
+                          onClick={() => handleOrderAction(order, "confirmed")}
+                          disabled={order.paymentMethod === "upi" && order.paymentStatus !== "paid"}
+                        >
+                          Confirm Order
+                        </button>
+                      )}
 
-                    {order.status === "confirmed" && (
-                      <button className="btn btn--secondary" onClick={() => handleOrderAction(order, "shipped")}>
-                        Mark Shipped
-                      </button>
-                    )}
+                      {order.status === "confirmed" && (
+                        <button className="btn btn--secondary" onClick={() => handleOrderAction(order, "shipped")}>
+                          Mark Shipped
+                        </button>
+                      )}
+
+                      {order.status === "shipped" && (
+                        <button className="btn btn--accent" onClick={() => handleOrderAction(order, "out_for_delivery")}>
+                          Mark Out for Delivery
+                        </button>
+                      )}
+                      
+                      {order.status === "out_for_delivery" && (
+                         <div className="status-label status-label--info">Order is moving on map... Wait for delivery confirmation.</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </>

@@ -1,4 +1,4 @@
-export const statusSteps = ["pending", "confirmed", "shipped", "delivered"];
+export const statusSteps = ["pending", "confirmed", "shipped", "out_for_delivery", "delivered"];
 
 export function formatCurrency(paise) {
   return new Intl.NumberFormat("en-IN", {
@@ -58,6 +58,10 @@ export function formatPaymentMethod(value) {
 export function formatStatusLabel(value) {
   if (!value) {
     return "-";
+  }
+  
+  if (value === "out_for_delivery") {
+    return "Out for delivery";
   }
 
   return value.charAt(0).toUpperCase() + value.slice(1);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/client";
 import OrderTimeline from "../components/OrderTimeline";
+import DeliveryMap from "../components/DeliveryMap";
 import Loader from "../components/Loader";
 import Alert from "../components/Alert";
 import {
@@ -20,7 +21,8 @@ export default function TrackOrderPage() {
 
   useEffect(() => {
     const loadOrder = async () => {
-      setLoading(true);
+      // Don't show loader on background polls
+      if (!order) setLoading(true);
       try {
         const { data } = await api.get(`/track/${orderNumber}`);
         setOrder(data.order);
@@ -32,6 +34,9 @@ export default function TrackOrderPage() {
     };
 
     loadOrder();
+    const intervalId = setInterval(loadOrder, 5000); // 5 sec poll
+    
+    return () => clearInterval(intervalId);
   }, [orderNumber]);
 
   if (loading) {
@@ -52,6 +57,10 @@ export default function TrackOrderPage() {
       </div>
 
       <Alert type="danger" message={error} />
+      
+      {order.status === "out_for_delivery" && order.location && (
+         <DeliveryMap location={order.location} orderNumber={order.orderNumber} />
+      )}
 
       <div className="split-grid split-grid--wide">
         <div className="card stack">

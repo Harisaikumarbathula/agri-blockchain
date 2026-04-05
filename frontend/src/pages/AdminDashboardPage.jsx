@@ -59,6 +59,9 @@ export default function AdminDashboardPage() {
           <span className="eyebrow">Platform oversight</span>
           <h1>Admin Dashboard</h1>
         </div>
+        <a href="/admin/analytics" className="btn btn--secondary">
+          View Delivery Analytics
+        </a>
       </div>
 
       <Alert type="danger" message={error} />

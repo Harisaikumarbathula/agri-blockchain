@@ -49,6 +49,7 @@ function toPublicOrder(order) {
     blockchainRefs: order.blockchainRefs,
     statusHistory: order.statusHistory,
     paymentHistory: order.paymentHistory,
+    location: order.location,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
     product: {

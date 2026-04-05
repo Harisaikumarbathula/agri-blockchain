@@ -43,7 +43,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
+      enum: ["pending", "confirmed", "shipped", "out_for_delivery", "delivered", "cancelled"],
       default: "pending",
     },
     paymentMethod: {
@@ -108,7 +108,7 @@ const orderSchema = new mongoose.Schema(
       {
         status: {
           type: String,
-          enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
+          enum: ["pending", "confirmed", "shipped", "out_for_delivery", "delivered", "cancelled"],
           required: true,
         },
         changedAt: {
@@ -140,6 +140,16 @@ const orderSchema = new mongoose.Schema(
         },
       },
     ],
+    location: {
+      lat: {
+        type: Number,
+        default: 21.1458, // default central India
+      },
+      lng: {
+        type: Number,
+        default: 79.0882,
+      },
+    },
   },
   {
     timestamps: true,
