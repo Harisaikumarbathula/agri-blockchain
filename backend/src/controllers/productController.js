@@ -5,6 +5,7 @@ const {
   recordProduct,
   updateProduct,
   deactivateProduct,
+  getProductFromChain,
 } = require("../services/blockchainService");
 
 function toHarvestDate(value) {
@@ -23,7 +24,7 @@ function toHarvestDateUnix(value) {
 
 const getProducts = asyncHandler(async (req, res) => {
   const { category, search } = req.query;
-  const filter = { isAvailable: true };
+  const filter = { isAvailable: true, isDeleted: false };
 
   if (category) {
     filter.category = category;
@@ -41,12 +42,12 @@ const getProducts = asyncHandler(async (req, res) => {
 });
 
 const getFarmerProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find({ farmerId: req.user._id }).sort({ createdAt: -1 });
+  const products = await Product.find({ farmerId: req.user._id, isDeleted: false }).sort({ createdAt: -1 });
   return res.json({ products });
 });
 
 const getProductById = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.id).populate("farmerId", "name email");
+  const product = await Product.findOne({ _id: req.params.id, isDeleted: false }).populate("farmerId", "name email");
 
   if (!product) {
     res.status(404);
@@ -170,6 +171,25 @@ const updateProductById = asyncHandler(async (req, res) => {
     throw new Error("Price must be a valid positive number.");
   }
 
+  // Ensure product exists on-chain (handles local chain resets)
+  try {
+    await getProductFromChain(product.blockchainProductId);
+  } catch (e) {
+    const reRecord = await recordProduct({
+      name: product.name,
+      category: product.category,
+      unit: product.unit,
+      quantity: Number(product.quantity),
+      batchCode: product.batchCode,
+      originLocation: product.originLocation,
+      harvestDateUnix: toHarvestDateUnix(product.harvestDate),
+    });
+    product.blockchainProductId = reRecord.blockchainId;
+    product.blockchainTxHash = reRecord.receipt.transactionHash;
+    product.lastBlockchainTxHash = reRecord.receipt.transactionHash;
+    await product.save();
+  }
+
   const blockchainResult = await updateProduct({
     blockchainId: product.blockchainProductId,
     name: nextValues.name,
@@ -213,9 +233,29 @@ const deleteProduct = asyncHandler(async (req, res) => {
     throw new Error("You can only remove your own products.");
   }
 
+  // Ensure product exists on-chain; if not, re-record and then deactivate
+  try {
+    await getProductFromChain(product.blockchainProductId);
+  } catch (e) {
+    const reRecord = await recordProduct({
+      name: product.name,
+      category: product.category,
+      unit: product.unit,
+      quantity: Number(product.quantity),
+      batchCode: product.batchCode,
+      originLocation: product.originLocation,
+      harvestDateUnix: toHarvestDateUnix(product.harvestDate),
+    });
+    product.blockchainProductId = reRecord.blockchainId;
+    product.blockchainTxHash = reRecord.receipt.transactionHash;
+    product.lastBlockchainTxHash = reRecord.receipt.transactionHash;
+    await product.save();
+  }
+
   const blockchainResult = await deactivateProduct(product.blockchainProductId);
 
   product.isAvailable = false;
+  product.isDeleted = true;
   product.lastBlockchainTxHash = blockchainResult.receipt.transactionHash;
   await product.save();
 

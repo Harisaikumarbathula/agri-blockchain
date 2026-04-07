@@ -53,6 +53,20 @@ export default function MarketplacePage() {
     setMessage(`${product.name} was added to your cart.`);
   };
 
+  const handleEditProduct = (product) => {
+    window.location.href = `/farmer?edit=${product._id}`;
+  };
+
+  const handleDeleteProduct = async (product) => {
+    try {
+      await api.delete(`/products/${product._id}`);
+      setMessage("Listing removed from the marketplace.");
+      await fetchProducts();
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    }
+  };
+
   const categories = [
     { id: "", label: "All" },
     { id: "vegetables", label: "Vegetables" },
@@ -124,7 +138,10 @@ export default function MarketplacePage() {
                 key={product._id}
                 product={product}
                 userRole={user?.role}
+                currentUserId={user?.id}
                 onAddToCart={handleAddToCart}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteProduct}
               />
             ))}
           </div>

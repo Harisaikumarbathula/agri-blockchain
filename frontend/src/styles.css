@@ -505,7 +505,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .product-card__image {
-  height: 200px;
+  height: 240px;
   background: #f0f4f1;
   position: relative;
   overflow: hidden;

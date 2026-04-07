@@ -4,11 +4,18 @@ import { Link } from "react-router-dom";
 export default function ProductCard({
   product,
   userRole,
+  currentUserId,
   onAddToCart,
   onEdit,
   onDelete,
 }) {
   const outOfStock = product.quantity <= 0 || !product.isAvailable;
+  const ownerId =
+    typeof product.farmerId === "object"
+      ? product.farmerId?._id
+      : product.farmerId;
+  const isOwner =
+    currentUserId && ownerId && String(ownerId) === String(currentUserId);
 
   return (
     <article className="product-card">
@@ -17,7 +24,7 @@ export default function ProductCard({
           <img src={product.imageUrl} alt={product.name} />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.2 }}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.2 }}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>
           </div>
         )}
         <span className="product-card__badge">{product.category}</span>
@@ -29,6 +36,9 @@ export default function ProductCard({
           <div className="product-card__location">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
             {product.originLocation || "Local Farm"}
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-primary)', fontWeight: '600', marginTop: '0.25rem' }}>
+            By {product.farmerId?.name || "Verified Farmer"}
           </div>
         </div>
 
@@ -48,10 +58,32 @@ export default function ProductCard({
         </div>
 
         <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
-          {userRole === "farmer" ? (
+          {userRole === "farmer" && isOwner ? (
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="btn btn--secondary" style={{ flex: 1 }} onClick={() => onEdit(product)}>Edit</button>
               <button className="btn btn--secondary" style={{ flex: 1, color: 'var(--color-danger)', borderColor: 'rgba(244, 67, 54, 0.2)' }} onClick={() => onDelete(product)}>Remove</button>
+            </div>
+          ) : userRole === "farmer" ? (
+            <div style={{ 
+              background: 'var(--color-background)', 
+              color: 'var(--color-muted)', 
+              padding: '0.75rem', 
+              borderRadius: 'var(--radius-md)', 
+              textAlign: 'center',
+              fontSize: '0.9rem',
+              fontWeight: '700',
+              border: '1px solid var(--color-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>
+              Farmer Product Listing
+            </div>
+          ) : userRole === "admin" ? (
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn btn--secondary" style={{ flex: 1, color: 'var(--color-danger)', borderColor: 'rgba(244, 67, 54, 0.2)' }} onClick={() => onDelete(product)}>Disable Listing</button>
             </div>
           ) : (
             <button 

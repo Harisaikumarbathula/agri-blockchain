@@ -11,7 +11,7 @@ const getUsers = asyncHandler(async (req, res) => {
 const getStats = asyncHandler(async (req, res) => {
   const [totalUsers, totalProducts, totalOrders, monetizedOrders] = await Promise.all([
     User.countDocuments(),
-    Product.countDocuments(),
+    Product.countDocuments({ isDeleted: false }),
     Order.countDocuments(),
     Order.find({
       status: { $ne: "cancelled" },
@@ -30,7 +30,7 @@ const getStats = asyncHandler(async (req, res) => {
 });
 
 const getAllProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find()
+  const products = await Product.find({ isDeleted: false })
     .populate("farmerId", "name email")
     .sort({ createdAt: -1 });
 

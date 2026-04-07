@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import api from "../api/client";
+import { useAuth } from "../contexts/AuthContext";
 import ProductCard from "../components/ProductCard";
 import OrderTimeline from "../components/OrderTimeline";
 import Loader from "../components/Loader";
@@ -29,6 +30,8 @@ const emptyForm = {
 };
 
 export default function FarmerDashboardPage() {
+  const { user } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("orders");
   const [formData, setFormData] = useState(emptyForm);
   const [products, setProducts] = useState([]);
@@ -142,7 +145,7 @@ export default function FarmerDashboardPage() {
         setMessage("Product updated successfully.");
       } else {
         await api.post("/products", payload);
-        setMessage("Product listed and recorded on the blockchain.");
+        setMessage("Product listed on the marketplace.");
       }
 
       resetForm();
@@ -165,6 +168,28 @@ export default function FarmerDashboardPage() {
       setError(extractErrorMessage(deleteError));
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const editId = params.get("edit");
+    if (editId) {
+      const existing = products.find((p) => p._id === editId);
+      if (existing) {
+        handleEditProduct(existing);
+      } else {
+        (async () => {
+          try {
+            const { data } = await api.get(`/products/${editId}`);
+            if (data?.product) {
+              handleEditProduct(data.product);
+            }
+          } catch {
+            /* no-op */
+          }
+        })();
+      }
+    }
+  }, [location.search, products]);
 
   const handleOrderAction = async (order, nextStatus) => {
     setError("");
@@ -319,16 +344,19 @@ export default function FarmerDashboardPage() {
                       <label>
                         <span>Unit</span>
                         <div style={{ position: 'relative' }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-muted)', pointerEvents: 'none' }}><path d="M7 20V4"/><path d="M3 8h4"/><path d="M3 12h4"/><path d="M3 16h4"/><path d="M11 12h10"/><path d="M11 16h10"/><path d="M11 20h10"/><path d="M11 8h10"/><path d="M11 4h10"/></svg>
-                          <input
-                            type="text"
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-muted)', zIndex: 1, pointerEvents: 'none' }}><path d="M7 20V4"/><path d="M3 8h4"/><path d="M3 12h4"/><path d="M3 16h4"/><path d="M11 12h10"/><path d="M11 16h10"/><path d="M11 20h10"/><path d="M11 8h10"/><path d="M11 4h10"/></svg>
+                          <select
                             name="unit"
                             value={formData.unit}
                             onChange={handleInputChange}
-                            placeholder="kg, bunch, etc."
                             required
                             style={{ paddingLeft: '3rem' }}
-                          />
+                          >
+                            <option value="kg">kg</option>
+                            <option value="dozen">Dozen</option>
+                            <option value="piece">Piece</option>
+                            <option value="liter">Liter</option>
+                          </select>
                         </div>
                       </label>
                       <label>
@@ -404,7 +432,7 @@ export default function FarmerDashboardPage() {
                         <div className="glass" style={{ padding: '2rem', borderRadius: 'var(--radius-md)', border: '2px dashed var(--color-border)', textAlign: 'center', transition: 'var(--transition)' }}>
                           {formData.imageUrl ? (
                             <div style={{ position: 'relative', display: 'inline-block' }}>
-                              <img src={formData.imageUrl} alt="Preview" style={{ maxHeight: '200px', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-card)' }} />
+                              <img src={formData.imageUrl} alt="Preview" style={{ maxHeight: '240px', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-card)' }} />
                               <button 
                                 type="button" 
                                 className="btn btn--ghost" 
@@ -468,7 +496,7 @@ export default function FarmerDashboardPage() {
                   <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border)' }}>
                     <button className="btn btn--primary btn--large" type="submit" disabled={submitting} style={{ flex: 1, padding: '1.25rem' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-                      {submitting ? "Processing..." : editingProduct ? "Update Listing" : "List on Blockchain"}
+                      {submitting ? "Processing..." : editingProduct ? "Update Listing" : "List on Marketplace"}
                     </button>
                     {editingProduct && (
                       <button className="btn btn--secondary btn--large" type="button" onClick={resetForm} style={{ flex: 0.4 }}>Cancel Edit</button>
@@ -569,6 +597,7 @@ export default function FarmerDashboardPage() {
                         key={product._id}
                         product={product}
                         userRole="farmer"
+                        currentUserId={user?.id}
                         onEdit={handleEditProduct}
                         onDelete={handleDeleteProduct}
                       />

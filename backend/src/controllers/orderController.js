@@ -141,7 +141,7 @@ const createOrder = asyncHandler(async (req, res) => {
   }
 
   const product = await Product.findById(productId);
-  if (!product || !product.isAvailable) {
+  if (!product || !product.isAvailable || product.isDeleted) {
     res.status(404);
     throw new Error("Product is not available.");
   }
