@@ -4,6 +4,21 @@ import api from "../api/client";
 const AuthContext = createContext(null);
 const storageKey = "agri-auth";
 
+function createStoredUser(user) {
+  if (!user) {
+    return null;
+  }
+
+  if (!String(user.profilePhoto || "").startsWith("data:image/")) {
+    return user;
+  }
+
+  return {
+    ...user,
+    profilePhoto: "",
+  };
+}
+
 export function AuthProvider({ children }) {
   const [authState, setAuthState] = useState(() => {
     const stored = localStorage.getItem(storageKey);
@@ -14,7 +29,13 @@ export function AuthProvider({ children }) {
   const persistAuth = (token, user) => {
     const value = { token, user };
     setAuthState(value);
-    localStorage.setItem(storageKey, JSON.stringify(value));
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        token,
+        user: createStoredUser(user),
+      })
+    );
   };
 
   const clearAuth = () => {
@@ -54,6 +75,17 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  const updateProfile = async (payload) => {
+    setLoading(true);
+    try {
+      const { data } = await api.put("/auth/me", payload);
+      persistAuth(authState.token, data.user);
+      return data.user;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logoutUser = () => {
     clearAuth();
   };
@@ -74,6 +106,7 @@ export function AuthProvider({ children }) {
     loginUser,
     registerUser,
     refreshProfile,
+    updateProfile,
     logoutUser,
   };
 

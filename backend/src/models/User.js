@@ -15,6 +15,18 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 20,
+    },
+    phoneExtension: {
+      type: String,
+      trim: true,
+      default: "+91",
+      maxlength: 8,
+    },
     password: {
       type: String,
       required: true,
@@ -25,6 +37,43 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["farmer", "buyer", "admin"],
       required: true,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 280,
+    },
+    profilePhoto: {
+      type: String,
+      default: "",
+    },
+    address: {
+      place: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+      village: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+      district: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+      state: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+      country: {
+        type: String,
+        trim: true,
+        default: "",
+      },
     },
   },
   {

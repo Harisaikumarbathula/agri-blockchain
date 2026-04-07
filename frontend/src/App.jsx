@@ -13,6 +13,7 @@ import BuyerOrdersPage from "./pages/BuyerOrdersPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import DashboardPage from "./pages/DashboardPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
+import ProfilePage from "./pages/ProfilePage";
 
 import LandingPage from "./pages/LandingPage";
 
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="marketplace" element={<MarketplacePage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={["buyer"]} />}>
