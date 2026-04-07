@@ -11,6 +11,7 @@ function sanitizeAddress(address = {}) {
     place: normalizeString(address.place || address.village || address.district),
     state: normalizeString(address.state),
     country: normalizeString(address.country),
+    pincode: normalizeString(address.pincode),
   };
 }
 
@@ -95,9 +96,9 @@ const updateProfile = asyncHandler(async (req, res) => {
   const address = sanitizeAddress(req.body.address);
   const requestedRole = normalizeString(req.body.role).toLowerCase();
 
-  if (!name || !email || !phoneExtension || !phone || !address.place || !address.state || !address.country) {
+  if (!name || !email || !phoneExtension || !phone || !address.place || !address.state || !address.country || !address.pincode) {
     res.status(400);
-    throw new Error("Name, email, phone extension, phone number, place, state, and country are required.");
+    throw new Error("Name, email, phone extension, phone number, place, state, country, and pincode are required.");
   }
 
   if (!["buyer", "farmer", "admin"].includes(req.user.role)) {
@@ -128,6 +129,11 @@ const updateProfile = asyncHandler(async (req, res) => {
   if (!/^\+?[0-9]{1,4}$/.test(phoneExtension)) {
     res.status(400);
     throw new Error("Phone extension must be 1 to 4 digits and may start with +.");
+  }
+
+  if (!/^[0-9]{4,10}$/.test(address.pincode)) {
+    res.status(400);
+    throw new Error("Pincode must be 4 to 10 digits.");
   }
 
   if (profilePhoto && !profilePhoto.startsWith("data:image/")) {

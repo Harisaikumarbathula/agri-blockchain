@@ -14,6 +14,7 @@ function createProfileForm(user) {
     place: user?.address?.place || user?.address?.village || user?.address?.district || "",
     state: user?.address?.state || "",
     country: user?.address?.country || "",
+    pincode: user?.address?.pincode || "",
     bio: user?.bio || "",
   };
 }
@@ -41,7 +42,8 @@ function formatRoleLabel(role) {
 }
 
 function buildLocationLabel(formData) {
-  return [formData.place, formData.state, formData.country].filter(Boolean).join(", ") || "Add your address";
+  const location = [formData.place, formData.state, formData.country].filter(Boolean).join(", ");
+  return [location, formData.pincode].filter(Boolean).join(" - ") || "Add your address";
 }
 
 function buildPhoneLabel(formData) {
@@ -153,10 +155,11 @@ export default function ProfilePage() {
         place: formData.place.trim(),
         state: formData.state.trim(),
         country: formData.country.trim(),
+        pincode: formData.pincode.trim(),
       },
     };
 
-    if (!payload.name || !payload.phoneExtension || !payload.phone || !payload.email || !payload.address.place || !payload.address.state || !payload.address.country) {
+    if (!payload.name || !payload.phoneExtension || !payload.phone || !payload.email || !payload.address.place || !payload.address.state || !payload.address.country || !payload.address.pincode) {
       setError("Please complete all required profile fields before saving.");
       setMessage("");
       return;
@@ -170,6 +173,12 @@ export default function ProfilePage() {
 
     if (!/^[0-9+\-\s()]{8,20}$/.test(payload.phone)) {
       setError("Please enter a valid phone number.");
+      setMessage("");
+      return;
+    }
+
+    if (!/^[0-9]{4,10}$/.test(payload.address.pincode)) {
+      setError("Please enter a valid pincode.");
       setMessage("");
       return;
     }
@@ -344,6 +353,19 @@ export default function ProfilePage() {
                     value={formData.country}
                     onChange={handleChange}
                     placeholder="e.g. India"
+                    disabled={!isEditing}
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Pincode</span>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleChange}
+                    placeholder="e.g. 500001"
                     disabled={!isEditing}
                     required
                   />

@@ -22,6 +22,96 @@ const orderSchema = new mongoose.Schema(
       ref: "Product",
       required: true,
     },
+    buyerContact: {
+      name: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      email: {
+        type: String,
+        default: "",
+        trim: true,
+        lowercase: true,
+      },
+      phoneExtension: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      phone: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      address: {
+        place: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        state: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        country: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        pincode: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+      },
+    },
+    farmerContact: {
+      name: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      email: {
+        type: String,
+        default: "",
+        trim: true,
+        lowercase: true,
+      },
+      phoneExtension: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      phone: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      address: {
+        place: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        state: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        country: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        pincode: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+      },
+    },
     blockchainProductId: {
       type: Number,
       required: true,

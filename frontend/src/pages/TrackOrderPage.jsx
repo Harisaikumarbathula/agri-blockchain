@@ -12,6 +12,15 @@ import {
   shortenHash,
 } from "../utils/formatters";
 
+function formatContactNumber(contact) {
+  return [contact?.phoneExtension, contact?.phone].filter(Boolean).join(" ") || "Not available";
+}
+
+function formatAddress(address) {
+  const location = [address?.place, address?.state, address?.country].filter(Boolean).join(", ");
+  return [location, address?.pincode].filter(Boolean).join(" - ") || "Not available";
+}
+
 export default function TrackOrderPage() {
   const { orderNumber } = useParams();
   const navigate = useNavigate();
@@ -68,7 +77,9 @@ export default function TrackOrderPage() {
           { label: "Batch Code", value: order.product?.batchCode },
           { label: "Origin", value: order.product?.originLocation },
           { label: "Harvest Date", value: formatDate(order.product?.harvestDate).split(",")[0] },
-          { label: "Quantity", value: `${order.quantity} ${order.product?.unit}` }
+          { label: "Quantity", value: `${order.quantity} ${order.product?.unit}` },
+          { label: "Buyer Address", value: formatAddress(order.buyerContact?.address) },
+          { label: "Buyer Mobile", value: formatContactNumber(order.buyerContact) }
         ]
       });
     }
@@ -254,6 +265,70 @@ export default function TrackOrderPage() {
                   </div>
                   <div style={{ display: 'none', color: 'var(--color-muted)', fontSize: '0.85rem', fontFamily: 'monospace', wordBreak: 'break-all', background: 'var(--color-background)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
                     0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+            <div className="card" style={{ borderLeft: '6px solid var(--color-secondary)', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: '#a06c00', fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                <div style={{ width: '40px', height: '40px', background: 'rgba(244, 179, 36, 0.14)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a06c00' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s7-4.35 7-11a7 7 0 1 0-14 0c0 6.65 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                </div>
+                Farm Details
+              </div>
+
+              <div className="stack" style={{ gap: '1rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Farmer</span>
+                  <div style={{ marginTop: '0.3rem', fontWeight: '800', fontSize: '1.2rem', color: 'var(--color-text)' }}>{order.farmerContact?.name || order.farmer?.name || "Verified Farmer"}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Farm Address</span>
+                  <div style={{ marginTop: '0.3rem', fontWeight: '700', color: 'var(--color-text)', lineHeight: '1.6' }}>
+                    {formatAddress(order.farmerContact?.address) !== "Not available" ? formatAddress(order.farmerContact?.address) : order.product?.originLocation || "Not available"}
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mobile</span>
+                    <div style={{ marginTop: '0.3rem', fontWeight: '700', color: 'var(--color-text)', lineHeight: '1.6' }}>{formatContactNumber(order.farmerContact)}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</span>
+                    <div style={{ marginTop: '0.3rem', fontWeight: '700', color: 'var(--color-text)', lineHeight: '1.6', overflowWrap: 'anywhere' }}>{order.farmerContact?.email || "Not available"}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="card" style={{ borderLeft: '6px solid var(--color-primary)', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-primary)', fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                <div style={{ width: '40px', height: '40px', background: 'var(--color-primary-light)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92V19a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 3.18 2 2 0 0 1 4.11 1h2.09a2 2 0 0 1 2 1.72c.12.9.33 1.78.61 2.63a2 2 0 0 1-.45 2.11L7.1 8.91a16 16 0 0 0 8 8l1.45-1.26a2 2 0 0 1 2.11-.45c.85.28 1.73.49 2.63.61A2 2 0 0 1 22 16.92Z"/></svg>
+                </div>
+                Buyer Delivery Details
+              </div>
+
+              <div className="stack" style={{ gap: '1rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Buyer</span>
+                  <div style={{ marginTop: '0.3rem', fontWeight: '800', fontSize: '1.2rem', color: 'var(--color-text)' }}>{order.buyerContact?.name || order.buyer?.name || "Verified Buyer"}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delivery Address</span>
+                  <div style={{ marginTop: '0.3rem', fontWeight: '700', color: 'var(--color-text)', lineHeight: '1.6' }}>{formatAddress(order.buyerContact?.address)}</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mobile</span>
+                    <div style={{ marginTop: '0.3rem', fontWeight: '700', color: 'var(--color-text)', lineHeight: '1.6' }}>{formatContactNumber(order.buyerContact)}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</span>
+                    <div style={{ marginTop: '0.3rem', fontWeight: '700', color: 'var(--color-text)', lineHeight: '1.6', overflowWrap: 'anywhere' }}>{order.buyerContact?.email || "Not available"}</div>
                   </div>
                 </div>
               </div>

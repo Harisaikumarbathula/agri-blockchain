@@ -11,6 +11,57 @@ const {
   recordCodCollected,
 } = require("../services/blockchainService");
 
+function normalizeString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeEmail(value) {
+  return normalizeString(value).toLowerCase();
+}
+
+function normalizeAddress(address = {}, fallback = {}) {
+  return {
+    place: normalizeString(address.place || address.village || address.district || fallback.place || fallback.village || fallback.district),
+    state: normalizeString(address.state || fallback.state),
+    country: normalizeString(address.country || fallback.country),
+    pincode: normalizeString(address.pincode || fallback.pincode),
+  };
+}
+
+function normalizeContact(contact = {}, fallback = {}) {
+  return {
+    name: normalizeString(contact.name || fallback.name),
+    email: normalizeEmail(contact.email || fallback.email),
+    phoneExtension: normalizeString(contact.phoneExtension || fallback.phoneExtension),
+    phone: normalizeString(contact.phone || fallback.phone),
+    address: normalizeAddress(contact.address || {}, fallback.address || {}),
+  };
+}
+
+function getBuyerContactValidationError(contact) {
+  if (!contact.email || !contact.phoneExtension || !contact.phone || !contact.address.place || !contact.address.state || !contact.address.country || !contact.address.pincode) {
+    return "Delivery address, pincode, mobile number, and email are required to place the order.";
+  }
+
+  if (!/^\S+@\S+\.\S+$/.test(contact.email)) {
+    return "A valid email address is required to place the order.";
+  }
+
+  if (!/^\+?[0-9]{1,4}$/.test(contact.phoneExtension)) {
+    return "Mobile extension must be 1 to 4 digits and may start with +.";
+  }
+
+  if (!/^[0-9+\-\s()]{8,20}$/.test(contact.phone)) {
+    return "A valid mobile number is required to place the order.";
+  }
+
+  if (!/^[0-9]{4,10}$/.test(contact.address.pincode)) {
+    return "Pincode must be 4 to 10 digits.";
+  }
+
+  return "";
+}
+
 function appendStatusHistory(order, status) {
   order.statusHistory.push({ status, changedAt: new Date() });
 }
@@ -42,6 +93,8 @@ function toPublicOrder(doc) {
   // Extra safety check for populated names
   const farmerName = order.farmerId?.name || (doc.farmerId && doc.farmerId.name) || "Verified Farmer";
   const buyerName = order.buyerId?.name || (doc.buyerId && doc.buyerId.name) || "Verified Buyer";
+  const farmerContact = normalizeContact(order.farmerContact, order.farmerId || {});
+  const buyerContact = normalizeContact(order.buyerContact, order.buyerId || {});
 
   return {
     _id: order._id,
@@ -63,6 +116,14 @@ function toPublicOrder(doc) {
     },
     buyer: {
       name: buyerName,
+    },
+    buyerContact: {
+      ...buyerContact,
+      name: buyerContact.name || buyerName,
+    },
+    farmerContact: {
+      ...farmerContact,
+      name: farmerContact.name || farmerName,
     },
     product: {
       name: order.productId?.name,
@@ -90,8 +151,8 @@ const getOrders = asyncHandler(async (req, res) => {
   }
 
   const orders = await Order.find(filter)
-    .populate("buyerId", "name email")
-    .populate("farmerId", "name email")
+    .populate("buyerId", "name email phone phoneExtension address")
+    .populate("farmerId", "name email phone phoneExtension address")
     .populate("productId")
     .sort({ createdAt: -1 });
 
@@ -100,8 +161,8 @@ const getOrders = asyncHandler(async (req, res) => {
 
 const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
-    .populate("buyerId", "name email")
-    .populate("farmerId", "name email")
+    .populate("buyerId", "name email phone phoneExtension address")
+    .populate("farmerId", "name email phone phoneExtension address")
     .populate("productId");
 
   if (!order) {
@@ -122,7 +183,7 @@ const getOrderById = asyncHandler(async (req, res) => {
 });
 
 const createOrder = asyncHandler(async (req, res) => {
-  const { productId, quantity, paymentMethod } = req.body;
+  const { productId, quantity, paymentMethod, buyerContact: rawBuyerContact } = req.body;
 
   if (!productId || !quantity || !paymentMethod) {
     res.status(400);
@@ -140,7 +201,7 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error("Payment method must be UPI or COD.");
   }
 
-  const product = await Product.findById(productId);
+  const product = await Product.findById(productId).populate("farmerId", "name email phone phoneExtension address");
   if (!product || !product.isAvailable || product.isDeleted) {
     res.status(404);
     throw new Error("Product is not available.");
@@ -150,6 +211,32 @@ const createOrder = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Requested quantity exceeds the available stock.");
   }
+
+  const buyerContact = {
+    ...normalizeContact(rawBuyerContact, req.user),
+    name: normalizeString(req.user.name || rawBuyerContact?.name || "Buyer"),
+  };
+  const buyerContactValidationError = getBuyerContactValidationError(buyerContact);
+  if (buyerContactValidationError) {
+    res.status(400);
+    throw new Error(buyerContactValidationError);
+  }
+
+  const farmerProfile = product.farmerId?.toObject ? product.farmerId.toObject() : product.farmerId;
+  const farmerContact = normalizeContact(
+    {
+      ...farmerProfile,
+      address: {
+        ...(farmerProfile?.address || {}),
+        place:
+          farmerProfile?.address?.place ||
+          farmerProfile?.address?.village ||
+          farmerProfile?.address?.district ||
+          product.originLocation,
+      },
+    },
+    farmerProfile
+  );
 
   const orderNumber = await generateOrderNumber(Order);
   const totalPaise = Number(product.pricePaise) * numericQuantity;
@@ -182,8 +269,10 @@ const createOrder = asyncHandler(async (req, res) => {
   const order = await Order.create({
     orderNumber,
     buyerId: req.user._id,
-    farmerId: product.farmerId,
+    farmerId: product.farmerId._id,
     productId: product._id,
+    buyerContact,
+    farmerContact,
     blockchainProductId: product.blockchainProductId,
     quantity: Number(quantity),
     totalPaise,
@@ -200,8 +289,8 @@ const createOrder = asyncHandler(async (req, res) => {
   });
 
   const populatedOrder = await Order.findById(order._id)
-    .populate("buyerId", "name email")
-    .populate("farmerId", "name email")
+    .populate("buyerId", "name email phone phoneExtension address")
+    .populate("farmerId", "name email phone phoneExtension address")
     .populate("productId");
 
   return res.status(201).json({
@@ -224,8 +313,8 @@ const createOrder = asyncHandler(async (req, res) => {
 const simulatePayment = asyncHandler(async (req, res) => {
   const { outcome } = req.body;
   const order = await Order.findById(req.params.id)
-    .populate("buyerId", "name email")
-    .populate("farmerId", "name email")
+    .populate("buyerId", "name email phone phoneExtension address")
+    .populate("farmerId", "name email phone phoneExtension address")
     .populate("productId");
 
   if (!order) {
@@ -416,8 +505,8 @@ const cancelOrder = asyncHandler(async (req, res) => {
 const getPublicTrackOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ orderNumber: req.params.orderNumber })
     .populate("productId")
-    .populate({ path: "farmerId", select: "name" })
-    .populate({ path: "buyerId", select: "name" });
+    .populate({ path: "farmerId", select: "name email phone phoneExtension address" })
+    .populate({ path: "buyerId", select: "name email phone phoneExtension address" });
 
   if (!order) {
     res.status(404);
