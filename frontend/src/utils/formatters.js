@@ -52,7 +52,7 @@ export function isWithinCancellationWindow(createdAt) {
 }
 
 export function formatPaymentMethod(value) {
-  return value === "cod" ? "Cash on Delivery" : "UPI";
+  return value === "cod" ? "Cash on Delivery" : "Razorpay Test Mode";
 }
 
 export function formatStatusLabel(value) {

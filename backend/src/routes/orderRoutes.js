@@ -3,7 +3,8 @@ const {
   getOrders,
   getOrderById,
   createOrder,
-  simulatePayment,
+  createPaymentOrder,
+  verifyPayment,
   updateOrderStatus,
   cancelOrder,
 } = require("../controllers/orderController");
@@ -14,10 +15,10 @@ const router = express.Router();
 router.use(protect);
 router.get("/", getOrders);
 router.post("/", authorize("buyer"), createOrder);
-router.post("/:id/payment/simulate", authorize("buyer"), simulatePayment);
+router.post("/:id/payment/order", authorize("buyer"), createPaymentOrder);
+router.post("/:id/payment/verify", authorize("buyer"), verifyPayment);
 router.put("/:id/status", authorize("farmer", "buyer"), updateOrderStatus);
 router.delete("/:id", authorize("buyer"), cancelOrder);
 router.get("/:id", getOrderById);
 
 module.exports = router;
-

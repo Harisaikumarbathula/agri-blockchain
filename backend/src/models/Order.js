@@ -151,6 +151,29 @@ const orderSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    paymentGateway: {
+      provider: {
+        type: String,
+        enum: ["", "razorpay"],
+        default: "",
+        trim: true,
+      },
+      orderId: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      paymentId: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+      signature: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+    },
     blockchainOrderId: {
       type: Number,
       required: true,
@@ -173,6 +196,11 @@ const orderSchema = new mongoose.Schema(
           trim: true,
         },
         shipped: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        out_for_delivery: {
           type: String,
           default: "",
           trim: true,

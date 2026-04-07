@@ -2,13 +2,13 @@
 
 AgriChain Local is a local-first agricultural marketplace and traceability platform built with React, Express, MongoDB, Solidity, Truffle, Ganache, and Web3.js.
 
-It lets farmers publish produce, buyers place orders with simulated UPI or COD payments, admins oversee the platform, and anyone with an order number verify the supply-chain journey through a public tracking page.
+It lets farmers publish produce, buyers place orders with Razorpay test-mode online payments or COD, admins oversee the platform, and anyone with an order number verify the supply-chain journey through a public tracking page.
 
 The project is designed for localhost development and demos:
 
 - no MetaMask is required for buyers
 - blockchain writes are signed by the backend
-- payments are simulated for smooth local testing and demos
+- Razorpay test mode is used for online payments during local testing and demos
 - blockchain proofs are still recorded for products, orders, payment updates, and order lifecycle changes
 
 ## Table Of Contents
@@ -54,7 +54,7 @@ This project uses a backend-signed blockchain architecture:
 
 - Farmer product listing with traceability fields such as batch code, origin location, harvest date, unit, quantity, and price
 - Buyer marketplace, cart, and grouped checkout by farmer
-- Simulated `UPI` and `COD` payment flows
+- Razorpay test-mode online payments and local `COD` collection flow
 - Buyer profile management with photo, address, pincode, phone extension, role, and bio
 - Order records that snapshot buyer delivery details and farmer contact details
 - Buyer order history with cancellation and payment retry flows
@@ -72,7 +72,7 @@ This project uses a backend-signed blockchain architecture:
 - Browse the marketplace
 - Add produce to cart
 - Enter delivery details during checkout
-- Pay with simulated UPI or choose COD
+- Pay with Razorpay test mode or choose COD
 - View order history
 - Cancel eligible pending orders
 - Confirm delivery
@@ -190,8 +190,8 @@ agri-blockchain/
 
 ### 3. Payment flow
 
-- `UPI` is simulated.
-- `COD` is simulated and marked collected when delivery is confirmed.
+- Online payments run through Razorpay test mode.
+- `COD` is still local and marked collected when delivery is confirmed.
 - Payment state changes are also written to the blockchain proof ledger.
 
 ### 4. Tracking
@@ -216,12 +216,12 @@ On backend startup, the server:
 
 ## Order Lifecycle
 
-### UPI flow
+### Razorpay test flow
 
 1. Buyer places an order with `paymentMethod=upi`
 2. Backend records the order on-chain with payment status `pending`
-3. Buyer simulates payment as `paid` or `failed`
-4. Backend records the payment update on-chain
+3. Buyer opens Razorpay Checkout in test mode
+4. Backend verifies the Razorpay signature and records the payment update on-chain
 5. Farmer confirms the order after successful payment
 6. Farmer marks it shipped
 7. Farmer marks it out for delivery
@@ -290,7 +290,7 @@ Out of the box, the project works without:
 
 - MetaMask
 - a public blockchain
-- a real payment gateway
+- a live payment gateway account
 
 ## Environment Variables
 
@@ -309,10 +309,14 @@ GANACHE_URL=http://127.0.0.1:7545
 CONTRACT_NETWORK_ID=1337
 CHAIN_ID=1337
 BLOCKCHAIN_SIGNER_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+RAZORPAY_KEY_ID=rzp_test_your_key_id
+RAZORPAY_KEY_SECRET=your_test_key_secret
 ADMIN_NAME=Platform Admin
 ADMIN_EMAIL=admin@agri.local
 ADMIN_PASSWORD=Admin123!
 ```
+
+Razorpay test keys are required if you want to use the online payment flow.
 
 ### Frontend: `frontend/.env`
 
@@ -474,7 +478,8 @@ If you change `ADMIN_EMAIL` or `ADMIN_PASSWORD` in `backend/.env`, the seeded cr
 - `GET /api/orders`
 - `GET /api/orders/:id`
 - `POST /api/orders`
-- `POST /api/orders/:id/payment/simulate`
+- `POST /api/orders/:id/payment/order`
+- `POST /api/orders/:id/payment/verify`
 - `PUT /api/orders/:id/status`
 - `DELETE /api/orders/:id`
 
@@ -616,7 +621,7 @@ AgriChain Local is a full-stack farm-to-buyer demo platform with:
 
 - marketplace and role-based dashboards
 - blockchain-backed proof recording
-- simulated local payments
+- Razorpay test-mode online payments and local COD
 - public tracking
 - admin analytics
 - profile and delivery detail management

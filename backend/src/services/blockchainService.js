@@ -211,6 +211,27 @@ async function getOrderFromChain(blockchainOrderId) {
   return contract.methods.getOrder(Number(blockchainOrderId)).call();
 }
 
+async function getOrderStatusProofs(blockchainOrderId) {
+  const contract = getContract();
+  const events = await contract.getPastEvents("OrderStatusUpdated", {
+    fromBlock: 0,
+    toBlock: "latest",
+    filter: {
+      orderId: String(blockchainOrderId),
+    },
+  });
+
+  return events.reduce((proofs, event) => {
+    const statusLabel = getOrderStatusLabel(event.returnValues?.orderStatus);
+
+    if (statusLabel && event.transactionHash) {
+      proofs[statusLabel] = event.transactionHash;
+    }
+
+    return proofs;
+  }, {});
+}
+
 function getOrderStatusLabel(statusNumber) {
   return orderStatusReverseMap[Number(statusNumber)] || "pending";
 }
@@ -234,6 +255,7 @@ module.exports = {
   recordCodCollected,
   getProductFromChain,
   getOrderFromChain,
+  getOrderStatusProofs,
   getOrderStatusLabel,
   getPaymentStatusLabel,
   getPaymentMethodLabel,

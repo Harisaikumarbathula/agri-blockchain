@@ -14,7 +14,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.3",
     "morgan": "^1.10.0",
+    "razorpay": "^2.9.6",
     "web3": "^1.10.4"
   }
 }
-

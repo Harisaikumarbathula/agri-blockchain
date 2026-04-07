@@ -11,6 +11,11 @@ import {
   formatPaymentMethod,
   shortenHash,
 } from "../utils/formatters";
+import {
+  getRazorpayErrorMessage,
+  isRazorpayDismissed,
+  payOrderWithRazorpay,
+} from "../utils/razorpay";
 
 function canCancel(order) {
   if (order.status !== "pending") {
@@ -89,17 +94,23 @@ export default function BuyerOrdersPage() {
     }
   };
 
-  const handleSimulatePayment = async (order, outcome) => {
+  const handlePayOrder = async (order) => {
     setBusyOrderId(order._id);
     setError("");
     setMessage("");
 
     try {
-      const { data } = await api.post(`/orders/${order._id}/payment/simulate`, { outcome });
+      const data = await payOrderWithRazorpay(order);
       setMessage(data.message);
       await loadOrders();
     } catch (paymentError) {
-      setError(extractErrorMessage(paymentError));
+      const feedback = getRazorpayErrorMessage(paymentError);
+
+      if (isRazorpayDismissed(paymentError)) {
+        setMessage(feedback);
+      } else {
+        setError(feedback);
+      }
     } finally {
       setBusyOrderId("");
     }
@@ -200,14 +211,13 @@ export default function BuyerOrdersPage() {
               {((order.paymentMethod === "upi" && order.status === "pending" && order.paymentStatus !== "paid") || canCancel(order) || ["shipped", "out_for_delivery"].includes(order.status)) && (
                 <div style={{ padding: '1.25rem 2rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem', background: 'var(--color-background)' }}>
                   {order.paymentMethod === "upi" && order.status === "pending" && order.paymentStatus !== "paid" && (
-                    <>
-                      <button className="btn btn--primary" onClick={() => handleSimulatePayment(order, "paid")} disabled={busyOrderId === order._id} style={{ flex: 1 }}>
-                        {busyOrderId === order._id ? "Processing..." : "Complete UPI Payment"}
-                      </button>
-                      <button className="btn btn--secondary" onClick={() => handleSimulatePayment(order, "failed")} disabled={busyOrderId === order._id}>
-                        Simulate Failure
-                      </button>
-                    </>
+                    <button className="btn btn--primary" onClick={() => handlePayOrder(order)} disabled={busyOrderId === order._id} style={{ flex: 1 }}>
+                      {busyOrderId === order._id
+                        ? "Opening Checkout..."
+                        : order.paymentStatus === "failed"
+                          ? "Retry Payment"
+                          : "Pay with Razorpay"}
+                    </button>
                   )}
 
                   {canCancel(order) && (

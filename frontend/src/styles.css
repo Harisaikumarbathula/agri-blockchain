@@ -1125,6 +1125,10 @@ code {
   font-weight: 600;
 }
 
+.cart-invoice-row--with-action {
+  grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(120px, 1fr)) minmax(180px, 1.15fr);
+}
+
 .cart-invoice-row strong {
   display: block;
   margin-bottom: 0.2rem;

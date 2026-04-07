@@ -47,7 +47,7 @@ export default function OrderTimeline({ order }) {
                 : "Awaiting COD collection"
               : paymentStatus === "paid"
                 ? "Blockchain Payment Verified"
-                : "Awaiting UPI settlement"}
+                : "Awaiting Razorpay confirmation"}
           </span>
         )}
       </div>

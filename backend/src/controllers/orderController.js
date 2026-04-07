@@ -9,7 +9,14 @@ const {
   updateOrderStatus: updateOrderStatusOnChain,
   cancelOrder: cancelOrderOnChain,
   recordCodCollected,
+  getOrderStatusProofs,
 } = require("../services/blockchainService");
+const {
+  isRazorpayConfigured,
+  getRazorpayKeyId,
+  createCheckoutOrder,
+  verifyCheckoutSignature,
+} = require("../services/razorpayService");
 
 function normalizeString(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -87,6 +94,92 @@ function canCancelOrder(order) {
   return ["pending", "failed"].includes(order.paymentStatus);
 }
 
+async function getOrderWithRelations(orderId) {
+  return Order.findById(orderId)
+    .populate("buyerId", "name email phone phoneExtension address")
+    .populate("farmerId", "name email phone phoneExtension address")
+    .populate("productId");
+}
+
+function ensureBuyerOwnsOrder(order, userId, res) {
+  if (order.buyerId._id.toString() !== userId.toString()) {
+    res.status(403);
+    throw new Error("Only the buyer can manage payment for this order.");
+  }
+}
+
+function ensureOnlinePaymentOrder(order, res) {
+  if (order.paymentMethod !== "upi") {
+    res.status(400);
+    throw new Error("Only Razorpay-enabled orders can use online checkout.");
+  }
+
+  if (order.status !== "pending") {
+    res.status(400);
+    throw new Error("Payment can only be completed before the farmer confirms the order.");
+  }
+}
+
+function getBuyerPhoneForCheckout(contact = {}) {
+  return `${contact.phoneExtension || ""}${contact.phone || ""}`.replace(/\D/g, "");
+}
+
+async function backfillStatusProofs(order) {
+  if (!order?.blockchainOrderId || !order?.statusHistory?.length) {
+    return order;
+  }
+
+  const recordedStatuses = new Set(
+    order.statusHistory
+      .map((entry) => entry?.status)
+      .filter((status) => ["confirmed", "shipped", "out_for_delivery", "delivered"].includes(status))
+  );
+
+  if (recordedStatuses.size === 0) {
+    return order;
+  }
+
+  const currentProofs =
+    order.blockchainRefs?.statusUpdated?.toObject?.() ||
+    { ...(order.blockchainRefs?.statusUpdated || {}) };
+  const missingStatuses = [...recordedStatuses].filter((status) => !currentProofs[status]);
+
+  if (missingStatuses.length === 0) {
+    return order;
+  }
+
+  try {
+    const recoveredProofs = await getOrderStatusProofs(order.blockchainOrderId);
+    let changed = false;
+
+    for (const status of missingStatuses) {
+      if (recoveredProofs[status]) {
+        currentProofs[status] = recoveredProofs[status];
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await Order.updateOne(
+        { _id: order._id },
+        {
+          $set: {
+            "blockchainRefs.statusUpdated": currentProofs,
+          },
+        }
+      );
+      order.blockchainRefs = {
+        ...(order.blockchainRefs?.toObject?.() || order.blockchainRefs || {}),
+        statusUpdated: currentProofs,
+      };
+    }
+  } catch (error) {
+    // Tracking should still render even if historical proof recovery is unavailable.
+  }
+
+  return order;
+}
+
 function toPublicOrder(doc) {
   const order = doc.toObject ? doc.toObject() : doc;
   
@@ -156,6 +249,8 @@ const getOrders = asyncHandler(async (req, res) => {
     .populate("productId")
     .sort({ createdAt: -1 });
 
+  await Promise.all(orders.map((order) => backfillStatusProofs(order)));
+
   return res.json({ orders });
 });
 
@@ -201,6 +296,11 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error("Payment method must be UPI or COD.");
   }
 
+  if (paymentMethod === "upi" && !isRazorpayConfigured()) {
+    res.status(503);
+    throw new Error("Razorpay test mode is not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env.");
+  }
+
   const product = await Product.findById(productId).populate("farmerId", "name email phone phoneExtension address");
   if (!product || !product.isAvailable || product.isDeleted) {
     res.status(404);
@@ -240,8 +340,6 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const orderNumber = await generateOrderNumber(Order);
   const totalPaise = Number(product.pricePaise) * numericQuantity;
-  const paymentReference =
-    paymentMethod === "upi" ? generatePaymentReference(orderNumber, "UPI") : "";
 
   let blockchainResult;
   try {
@@ -280,7 +378,10 @@ const createOrder = asyncHandler(async (req, res) => {
     status: "pending",
     paymentMethod,
     paymentStatus: "pending",
-    paymentReference,
+    paymentReference: "",
+    paymentGateway: {
+      provider: paymentMethod === "upi" ? "razorpay" : "",
+    },
     blockchainOrderId: blockchainResult.blockchainOrderId,
     blockchainRefs: {
       orderCreated: blockchainResult.receipt.transactionHash,
@@ -298,72 +399,150 @@ const createOrder = asyncHandler(async (req, res) => {
     paymentIntent:
       paymentMethod === "upi"
         ? {
-            reference: paymentReference,
             amountPaise: totalPaise,
             method: "upi",
+            provider: "razorpay",
+            requiresAction: true,
           }
         : null,
     message:
       paymentMethod === "upi"
-        ? "Order created. Simulate the UPI payment to continue."
+        ? "Order created. Complete the payment with Razorpay Test Mode to continue."
         : "COD order created successfully.",
   });
 });
 
-const simulatePayment = asyncHandler(async (req, res) => {
-  const { outcome } = req.body;
-  const order = await Order.findById(req.params.id)
-    .populate("buyerId", "name email phone phoneExtension address")
-    .populate("farmerId", "name email phone phoneExtension address")
-    .populate("productId");
+const createPaymentOrder = asyncHandler(async (req, res) => {
+  const order = await getOrderWithRelations(req.params.id);
 
   if (!order) {
     res.status(404);
     throw new Error("Order not found.");
   }
 
-  if (order.buyerId._id.toString() !== req.user._id.toString()) {
-    res.status(403);
-    throw new Error("Only the buyer can simulate payment for this order.");
-  }
-
-  if (order.paymentMethod !== "upi") {
-    res.status(400);
-    throw new Error("Only UPI orders can use simulated payments.");
-  }
-
-  if (order.status !== "pending") {
-    res.status(400);
-    throw new Error("Payment can only be simulated before the farmer confirms the order.");
-  }
-
-  if (!["paid", "failed"].includes(outcome)) {
-    res.status(400);
-    throw new Error("Payment outcome must be paid or failed.");
-  }
+  ensureBuyerOwnsOrder(order, req.user._id, res);
+  ensureOnlinePaymentOrder(order, res);
 
   if (order.paymentStatus === "paid") {
     res.status(400);
-    throw new Error("This UPI order is already marked as paid.");
+    throw new Error("This Razorpay order is already marked as paid.");
   }
 
-  const attempt = order.paymentHistory.length + 1;
-  const paymentReference =
-    order.paymentStatus === "failed"
-      ? generatePaymentReference(order.orderNumber, "UPI", attempt)
-      : order.paymentReference || generatePaymentReference(order.orderNumber, "UPI", attempt);
+  if (!["pending", "failed"].includes(order.paymentStatus)) {
+    res.status(400);
+    throw new Error("This order is no longer eligible for payment.");
+  }
 
-  const blockchainResult = await recordPayment(order.blockchainOrderId, outcome, paymentReference);
+  if (!isRazorpayConfigured()) {
+    res.status(503);
+    throw new Error("Razorpay test mode is not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env.");
+  }
 
-  order.paymentStatus = outcome;
-  order.paymentReference = paymentReference;
+  const razorpayOrder = await createCheckoutOrder({
+    amountPaise: order.totalPaise,
+    receipt: order.orderNumber,
+    notes: {
+      internalOrderId: order._id.toString(),
+      orderNumber: order.orderNumber,
+      productName: order.productId?.name || "Farm produce",
+    },
+  });
+
+  order.paymentGateway = {
+    provider: "razorpay",
+    orderId: razorpayOrder.id,
+    paymentId: "",
+    signature: "",
+  };
+  await order.save();
+
+  return res.json({
+    checkout: {
+      keyId: getRazorpayKeyId(),
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      description: `${order.productId?.name || "Farm produce"} - ${order.orderNumber}`,
+      name: "AgriChain Local",
+      notes: razorpayOrder.notes || {},
+      orderId: razorpayOrder.id,
+      prefill: {
+        contact: getBuyerPhoneForCheckout(order.buyerContact),
+        email: order.buyerContact?.email || order.buyerId?.email || "",
+        name: order.buyerContact?.name || order.buyerId?.name || "Verified Buyer",
+      },
+      receipt: order.orderNumber,
+    },
+    message: "Razorpay checkout is ready.",
+  });
+});
+
+const verifyPayment = asyncHandler(async (req, res) => {
+  const { razorpay_order_id: razorpayOrderId, razorpay_payment_id: razorpayPaymentId, razorpay_signature: razorpaySignature } = req.body;
+  const order = await getOrderWithRelations(req.params.id);
+
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found.");
+  }
+
+  ensureBuyerOwnsOrder(order, req.user._id, res);
+
+  if (order.paymentStatus === "paid") {
+    if (order.paymentGateway?.paymentId === razorpayPaymentId) {
+      return res.json({
+        order,
+        message: "Razorpay payment already verified.",
+      });
+    }
+
+    res.status(400);
+    throw new Error("This Razorpay order is already marked as paid.");
+  }
+
+  ensureOnlinePaymentOrder(order, res);
+
+  if (!["pending", "failed"].includes(order.paymentStatus)) {
+    res.status(400);
+    throw new Error("This order is no longer eligible for payment.");
+  }
+
+  if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    res.status(400);
+    throw new Error("Razorpay verification payload is incomplete.");
+  }
+
+  if (!isRazorpayConfigured()) {
+    res.status(503);
+    throw new Error("Razorpay test mode is not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env.");
+  }
+
+  if (!order.paymentGateway?.orderId || order.paymentGateway.orderId !== razorpayOrderId) {
+    res.status(400);
+    throw new Error("The Razorpay order does not match this AgriChain order.");
+  }
+
+  if (!verifyCheckoutSignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature })) {
+    res.status(400);
+    throw new Error("Razorpay signature verification failed.");
+  }
+
+  const blockchainResult = await recordPayment(order.blockchainOrderId, "paid", razorpayPaymentId);
+
+  order.paymentStatus = "paid";
+  order.paymentReference = razorpayPaymentId;
+  order.paymentGateway = {
+    provider: "razorpay",
+    orderId: razorpayOrderId,
+    paymentId: razorpayPaymentId,
+    signature: razorpaySignature,
+  };
   order.blockchainRefs.paymentRecorded = blockchainResult.receipt.transactionHash;
-  appendPaymentHistory(order, outcome, paymentReference, blockchainResult.receipt.transactionHash);
+  appendPaymentHistory(order, "paid", razorpayPaymentId, blockchainResult.receipt.transactionHash);
   await order.save();
 
   return res.json({
     order,
-    message: outcome === "paid" ? "UPI payment simulated successfully." : "UPI payment marked as failed.",
+    message: "Razorpay payment verified successfully.",
   });
 });
 
@@ -398,7 +577,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 
     if (order.paymentMethod === "upi" && order.paymentStatus !== "paid") {
       res.status(400);
-      throw new Error("UPI orders must be paid before the farmer can confirm them.");
+      throw new Error("Online orders must be paid before the farmer can confirm them.");
     }
   } else if (status === "shipped") {
     const isFarmer = req.user.role === "farmer" && order.farmerId._id.toString() === req.user._id.toString();
@@ -513,6 +692,8 @@ const getPublicTrackOrder = asyncHandler(async (req, res) => {
     throw new Error("Order not found.");
   }
 
+  await backfillStatusProofs(order);
+
   return res.json({ order: toPublicOrder(order) });
 });
 
@@ -520,7 +701,8 @@ module.exports = {
   getOrders,
   getOrderById,
   createOrder,
-  simulatePayment,
+  createPaymentOrder,
+  verifyPayment,
   updateOrderStatus,
   cancelOrder,
   getPublicTrackOrder,

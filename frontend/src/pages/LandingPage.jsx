@@ -80,7 +80,7 @@ export default function LandingPage() {
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
             <h3 style={{ fontSize: '1.65rem', marginBottom: '0.75rem', color: 'var(--color-text)' }}>Secure Payments</h3>
-            <p style={{ color: 'var(--color-muted)', lineHeight: '1.7', fontSize: '1.05rem' }}>Integrated UPI and safe COD options ensure that funds are handled securely and farmers are paid fairly and quickly.</p>
+            <p style={{ color: 'var(--color-muted)', lineHeight: '1.7', fontSize: '1.05rem' }}>Razorpay test-mode checkout and safe COD options help buyers pay smoothly while farmers receive verified order updates quickly.</p>
           </div>
         </div>
       </section>

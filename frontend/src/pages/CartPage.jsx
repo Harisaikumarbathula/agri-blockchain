@@ -6,6 +6,11 @@ import { useAuth } from "../contexts/AuthContext";
 import Alert from "../components/Alert";
 import Loader from "../components/Loader";
 import { extractErrorMessage, formatCurrency } from "../utils/formatters";
+import {
+  getRazorpayErrorMessage,
+  isRazorpayDismissed,
+  payOrderWithRazorpay,
+} from "../utils/razorpay";
 
 function createCheckoutForm(user) {
   return {
@@ -26,6 +31,17 @@ function buildCheckoutAddress(formData) {
 
 function getPaymentBadgeClass(status) {
   return status === "paid" ? "badge badge--success" : "badge badge--warning";
+}
+
+function replaceCheckoutOrder(groups, groupIdx, updatedOrder) {
+  return groups.map((group, currentIndex) =>
+    currentIndex === groupIdx
+      ? {
+          ...group,
+          orders: group.orders.map((order) => (order._id === updatedOrder._id ? updatedOrder : order)),
+        }
+      : group
+  );
 }
 
 export default function CartPage() {
@@ -172,7 +188,7 @@ export default function CartPage() {
       setCheckoutGroups(createdGroups);
       setMessage(
         paymentMethod === "upi"
-          ? "Orders created by farmer. Simulate payments below."
+          ? "Orders created. Complete each online payment with Razorpay Test Mode below."
           : "COD orders created successfully."
       );
     } catch (checkoutError) {
@@ -183,29 +199,28 @@ export default function CartPage() {
     }
   };
 
-  const handleSimulatePayment = async (orderId, groupIdx, outcome) => {
+  const handlePayOrder = async (orderId, groupIdx) => {
+    const order = checkoutGroups[groupIdx]?.orders.find((currentOrder) => currentOrder._id === orderId);
+    if (!order) {
+      return;
+    }
+
     setBusyOrderId(orderId);
     setError("");
     setMessage("");
 
     try {
-      const { data } = await api.post(`/orders/${orderId}/payment/simulate`, {
-        outcome,
-      });
-
-      setCheckoutGroups((current) =>
-        current.map((group, currentIndex) =>
-          currentIndex === groupIdx
-            ? {
-                ...group,
-                orders: group.orders.map((order) => (order._id === orderId ? data.order : order)),
-              }
-            : group
-        )
-      );
+      const data = await payOrderWithRazorpay(order);
+      setCheckoutGroups((current) => replaceCheckoutOrder(current, groupIdx, data.order));
       setMessage(data.message);
     } catch (paymentError) {
-      setError(extractErrorMessage(paymentError));
+      const feedback = getRazorpayErrorMessage(paymentError);
+
+      if (isRazorpayDismissed(paymentError)) {
+        setMessage(feedback);
+      } else {
+        setError(feedback);
+      }
     } finally {
       setBusyOrderId("");
     }
@@ -249,7 +264,7 @@ export default function CartPage() {
             <div>
               <div className="eyebrow" style={{ marginBottom: "0.5rem" }}>Orders Created</div>
               <h2>Checkout complete</h2>
-              <p>Your farmer-wise orders are secured. If you chose UPI, you can finish payment from the invoice cards below.</p>
+              <p>Your farmer-wise orders are secured. If you chose online payment, finish each one with Razorpay Test Mode from the invoice cards below.</p>
             </div>
             <Link className="btn btn--secondary" to="/buyer/orders">Open My Orders</Link>
           </div>
@@ -269,7 +284,14 @@ export default function CartPage() {
 
               <div className="cart-invoice-list">
                 {group.orders.map((order) => (
-                  <div key={order._id} className="cart-invoice-row">
+                  <div
+                    key={order._id}
+                    className={`cart-invoice-row ${
+                      order.paymentMethod === "upi" && order.paymentStatus !== "paid"
+                        ? "cart-invoice-row--with-action"
+                        : ""
+                    }`}
+                  >
                     <div>
                       <strong>{order.productId?.name}</strong>
                       <span>{order.orderNumber}</span>
@@ -279,29 +301,25 @@ export default function CartPage() {
                     <div>
                       <span className={getPaymentBadgeClass(order.paymentStatus)}>{order.paymentStatus.toUpperCase()}</span>
                     </div>
+                    {order.paymentMethod === "upi" && order.paymentStatus !== "paid" && (
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <button
+                          className="btn btn--primary"
+                          disabled={busyOrderId === order._id}
+                          onClick={() => handlePayOrder(order._id, groupIdx)}
+                          style={{ width: "100%" }}
+                        >
+                          {busyOrderId === order._id
+                            ? "Opening Checkout..."
+                            : order.paymentStatus === "failed"
+                              ? "Retry Payment"
+                              : "Pay with Razorpay"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-
-              {paymentMethod === "upi" && group.orders.some((order) => order.paymentStatus === "pending") && (
-                <div className="cart-invoice-action">
-                  <button
-                    className="btn btn--primary btn--block"
-                    disabled={busyOrderId === `all-${groupIdx}`}
-                    onClick={async () => {
-                      setBusyOrderId(`all-${groupIdx}`);
-                      for (const order of group.orders) {
-                        if (order.paymentStatus === "pending") {
-                          await handleSimulatePayment(order._id, groupIdx, "paid");
-                        }
-                      }
-                      setBusyOrderId("");
-                    }}
-                  >
-                    {busyOrderId === `all-${groupIdx}` ? "Processing Payment..." : `Pay ${group.farmerName}`}
-                  </button>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -320,13 +338,13 @@ export default function CartPage() {
               <div>
                 <div className="eyebrow" style={{ marginBottom: "0.5rem" }}>Required Contact</div>
                 <h2>Delivery Details</h2>
-                <p>Add the buyer contact details once. We’ll carry them through checkout and into tracking.</p>
+                <p>Add the buyer contact details once. We'll carry them through checkout and into tracking.</p>
               </div>
 
               <div className="cart-contact-preview">
                 <span>Delivery Preview</span>
                 <strong>{buildCheckoutAddress(checkoutForm) || "Add your delivery address"}</strong>
-                <small>{checkoutForm.email || "Add email"} · {[checkoutForm.phoneExtension, checkoutForm.phone].filter(Boolean).join(" ") || "Add mobile number"}</small>
+                <small>{checkoutForm.email || "Add email"} | {[checkoutForm.phoneExtension, checkoutForm.phone].filter(Boolean).join(" ") || "Add mobile number"}</small>
               </div>
             </div>
 
@@ -521,7 +539,7 @@ export default function CartPage() {
                       className={paymentMethod === "upi" ? "cart-payment-button cart-payment-button--active" : "cart-payment-button"}
                       onClick={() => setPaymentMethod("upi")}
                     >
-                      UPI Payment
+                      Razorpay Test Mode
                     </button>
                     <button
                       type="button"
