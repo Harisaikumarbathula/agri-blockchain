@@ -1,75 +1,89 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 export default function LandingPage() {
+  const [trackId, setTrackId] = useState("");
+  const navigate = useNavigate();
+
+  const handleTrack = (e) => {
+    e.preventDefault();
+    if (trackId.trim()) {
+      navigate(`/track/${trackId.trim()}`);
+    }
+  };
+
   return (
-    <div className="landing-wrapper">
-      <div className="landing-hero">
-        <div className="landing-hero-overlay"></div>
-        <div className="landing-blob landing-blob--1"></div>
-        <div className="landing-blob landing-blob--2"></div>
-        <div className="landing-hero-content">
-          <h1 className="slide-up landing-headline">
-            <span className="text-highlight">AgriChain</span> &ndash; Transparent Blockchain-Based Agricultural Marketplace
-          </h1>
-          <h2 className="landing-caption slide-up-delay" style={{ fontSize: "1.5rem", fontWeight: "600", color: "#1e293b", marginTop: "1rem" }}>
-            Empowering Farmers. Ensuring Fair Prices. Eliminating Middlemen.
-          </h2>
-          <p className="landing-caption slide-up-delay-2" style={{ color: "#475569" }}>
-            A revolutionary blockchain-based marketplace connecting farmers directly 
-            with buyers. Secure smart contracts, uncompromising transparency, and 
-            local focus.
-          </p>
+    <div className="stack" style={{ gap: '6rem', paddingBottom: '6rem' }}>
+      <section className="hero" style={{ textAlign: 'center', maxWidth: '900px', margin: '0 auto', paddingTop: '4rem' }}>
+        <div className="eyebrow" style={{ marginBottom: '2rem' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          Blockchain Verified Produce
+        </div>
+        
+        <h1 style={{ fontSize: 'clamp(3rem, 8vw, 5rem)', lineHeight: '1.05', marginBottom: '1.5rem', letterSpacing: '-0.04em', color: 'var(--color-text)' }}>
+          From the <span style={{ color: 'var(--color-primary)', fontStyle: 'italic', position: 'relative' }}>soil<svg style={{ position: 'absolute', bottom: '-10px', left: '0', width: '100%' }} viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q50,20 100,10" stroke="var(--color-secondary)" strokeWidth="4" fill="none" /></svg></span> to your table,<br />with total transparency.
+        </h1>
+        
+        <p style={{ fontSize: '1.25rem', color: 'var(--color-muted)', maxWidth: '650px', margin: '0 auto 3rem', lineHeight: '1.6', fontWeight: '500' }}>
+          AgriChain connects farmers directly with buyers. Every harvest is recorded on the blockchain, ensuring fair prices and untampered quality tracking.
+        </p>
+        
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', marginBottom: '4rem' }}>
+          <Link to="/marketplace" className="btn btn--primary btn--large">
+            Shop Marketplace &rarr;
+          </Link>
+          <Link to="/register" className="btn btn--secondary btn--large">
+            Join as a Farmer
+          </Link>
+        </div>
+
+        <div className="glass" style={{ padding: '0.75rem', borderRadius: 'var(--radius-full)', boxShadow: 'var(--shadow-hover)', maxWidth: '550px', margin: '0 auto', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '1.25rem', color: 'var(--color-primary)', opacity: '0.7' }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <form onSubmit={handleTrack} style={{ flex: 1, display: 'flex' }}>
+            <input 
+              type="text" 
+              placeholder="Enter Order or Batch Number..." 
+              value={trackId}
+              onChange={(e) => setTrackId(e.target.value)}
+              style={{ border: 'none', background: 'transparent', width: '100%', padding: '0.6rem 1rem', fontSize: '1.05rem', outline: 'none', boxShadow: 'none' }}
+            />
+            <button type="submit" className="btn btn--primary" style={{ padding: '0.75rem 1.75rem' }}>Track</button>
+          </form>
+        </div>
+      </section>
+
+      <section className="features">
+        <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+          <h2 style={{ fontSize: '2.75rem', marginBottom: '1rem', color: 'var(--color-text)', letterSpacing: '-0.02em' }}>A smarter agricultural supply chain</h2>
+          <p style={{ color: 'var(--color-muted)', fontSize: '1.15rem', fontWeight: '500' }}>Built on trust, verified by technology.</p>
+        </div>
+        
+        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+          <div className="card stack" style={{ padding: '3rem' }}>
+            <div style={{ width: '56px', height: '56px', background: 'var(--color-primary-light)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)', marginBottom: '1rem' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 4.21 12 6.81 16.5 4.21"/><polyline points="7.5 19.79 7.5 14.6 3 12"/><polyline points="21 12 16.5 14.6 16.5 19.79"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>
+            </div>
+            <h3 style={{ fontSize: '1.65rem', marginBottom: '0.75rem', color: 'var(--color-text)' }}>Blockchain Traceability</h3>
+            <p style={{ color: 'var(--color-muted)', lineHeight: '1.7', fontSize: '1.05rem' }}>Every step of the supply chain—from harvest to delivery—is recorded immutably. Scan to know exactly where your food comes from.</p>
+          </div>
           
-          <div className="landing-actions slide-up-delay-3">
-            <Link to="/register" className="btn btn--primary btn--large">
-              Get Started as Farmer
-            </Link>
-            <Link to="/register" className="btn btn--ghost btn--large" style={{ backgroundColor: "rgba(76,175,80,0.1)", color: "#166534" }}>
-              Join as Buyer
-            </Link>
-            <Link to="/marketplace" className="btn btn--secondary btn--large">
-              Explore Marketplace
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="landing-about">
-        <div className="about-content">
-          <h2>The Problem & Our Solution</h2>
-          <div className="about-grid">
-            <div className="about-panel problem-panel">
-              <h3>The Overlooked Farmer</h3>
-              <p>For generations, the agricultural supply chain has been crowded by middlemen. Farmers ultimately bear the physical burden but receive a fraction of the end value, limiting their profits and growth.</p>
+          <div className="card stack" style={{ padding: '3rem' }}>
+            <div style={{ width: '56px', height: '56px', background: 'rgba(255, 152, 0, 0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff9800', marginBottom: '1rem' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="4" height="4" x="2" y="14" rx="1"/><path d="M12 18v-4"/><path d="M18 18v-4"/><rect width="14" height="6" x="6" y="12" rx="2"/><path d="M12 12V4"/><path d="M18 12V6"/><path d="M22 6h-8"/><path d="M16 4h-4"/></svg>
             </div>
-            <div className="about-panel solution-panel">
-              <h3>The Blockchain Bridge</h3>
-              <p>We use smart contracts to bridge the gap directly. By enabling transparent, direct selling, farmers earn a 100% fair price for their produce, and buyers know exactly where their food comes from.</p>
+            <h3 style={{ fontSize: '1.65rem', marginBottom: '0.75rem', color: 'var(--color-text)' }}>Direct from Farmers</h3>
+            <p style={{ color: 'var(--color-muted)', lineHeight: '1.7', fontSize: '1.05rem' }}>Cut out the middlemen. Farmers set their own prices and buyers get fresher produce while supporting local agriculture.</p>
+          </div>
+          
+          <div className="card stack" style={{ padding: '3rem' }}>
+            <div style={{ width: '56px', height: '56px', background: 'rgba(33, 150, 243, 0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2196f3', marginBottom: '1rem' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
+            <h3 style={{ fontSize: '1.65rem', marginBottom: '0.75rem', color: 'var(--color-text)' }}>Secure Payments</h3>
+            <p style={{ color: 'var(--color-muted)', lineHeight: '1.7', fontSize: '1.05rem' }}>Integrated UPI and safe COD options ensure that funds are handled securely and farmers are paid fairly and quickly.</p>
           </div>
         </div>
-      </div>
-
-      <div className="features-section">
-        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Platform Features</h2>
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">🤝</div>
-            <h3>Direct Marketplace</h3>
-            <p>A seamless portal built to connect farmers face-to-face with buyers.</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">⛓️</div>
-            <h3>Blockchain Transparency</h3>
-            <p>Every transaction is locked natively on the blockchain, eliminating tampering.</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">💸</div>
-            <h3>Smart Contract Escrow</h3>
-            <p>Payments are safely held via smart contracts until order delivery completes.</p>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

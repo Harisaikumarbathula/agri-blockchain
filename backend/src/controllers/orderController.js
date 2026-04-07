@@ -36,7 +36,13 @@ function canCancelOrder(order) {
   return ["pending", "failed"].includes(order.paymentStatus);
 }
 
-function toPublicOrder(order) {
+function toPublicOrder(doc) {
+  const order = doc.toObject ? doc.toObject() : doc;
+  
+  // Extra safety check for populated names
+  const farmerName = order.farmerId?.name || (doc.farmerId && doc.farmerId.name) || "Verified Farmer";
+  const buyerName = order.buyerId?.name || (doc.buyerId && doc.buyerId.name) || "Verified Buyer";
+
   return {
     _id: order._id,
     orderNumber: order.orderNumber,
@@ -52,6 +58,12 @@ function toPublicOrder(order) {
     location: order.location,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
+    farmer: {
+      name: farmerName,
+    },
+    buyer: {
+      name: buyerName,
+    },
     product: {
       name: order.productId?.name,
       category: order.productId?.category,
@@ -278,13 +290,14 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     throw new Error("Order not found.");
   }
 
-  if (!status || !["confirmed", "shipped", "delivered"].includes(status)) {
+  if (!status || !["confirmed", "shipped", "out_for_delivery", "delivered"].includes(status)) {
     res.status(400);
     throw new Error("A valid order status is required.");
   }
 
   if (status === "confirmed") {
-    if (req.user.role !== "farmer" || order.farmerId._id.toString() !== req.user._id.toString()) {
+    const isFarmer = req.user.role === "farmer" && order.farmerId._id.toString() === req.user._id.toString();
+    if (!isFarmer) {
       res.status(403);
       throw new Error("Only the farmer can confirm this order.");
     }
@@ -298,10 +311,9 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("UPI orders must be paid before the farmer can confirm them.");
     }
-  }
-
-  if (status === "shipped") {
-    if (req.user.role !== "farmer" || order.farmerId._id.toString() !== req.user._id.toString()) {
+  } else if (status === "shipped") {
+    const isFarmer = req.user.role === "farmer" && order.farmerId._id.toString() === req.user._id.toString();
+    if (!isFarmer) {
       res.status(403);
       throw new Error("Only the farmer can mark this order as shipped.");
     }
@@ -310,24 +322,37 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Only confirmed orders can be shipped.");
     }
-  }
-
-  if (status === "delivered") {
-    if (req.user.role !== "buyer" || order.buyerId._id.toString() !== req.user._id.toString()) {
+  } else if (status === "out_for_delivery") {
+    const isFarmer = req.user.role === "farmer" && order.farmerId._id.toString() === req.user._id.toString();
+    if (!isFarmer) {
       res.status(403);
-      throw new Error("Only the buyer can confirm delivery.");
+      throw new Error("Only the farmer can mark this order as out for delivery.");
     }
 
     if (order.status !== "shipped") {
       res.status(400);
-      throw new Error("Only shipped orders can be marked as delivered.");
+      throw new Error("Only shipped orders can be marked as out for delivery.");
+    }
+  }
+
+  if (status === "delivered") {
+    const isBuyer = req.user.role === "buyer" && order.buyerId._id.toString() === req.user._id.toString();
+
+    if (!isBuyer) {
+      res.status(403);
+      throw new Error("Only the buyer can confirm delivery.");
+    }
+
+    if (!["shipped", "out_for_delivery"].includes(order.status)) {
+      res.status(400);
+      throw new Error("Only shipped or out for delivery orders can be marked as delivered.");
     }
   }
 
   const blockchainResult = await updateOrderStatusOnChain(order.blockchainOrderId, status);
+  order.blockchainRefs.statusUpdated[status] = blockchainResult.receipt.transactionHash;
 
   order.status = status;
-  order.blockchainRefs.statusUpdated[status] = blockchainResult.receipt.transactionHash;
   appendStatusHistory(order, status);
 
   if (status === "delivered" && order.paymentMethod === "cod") {
@@ -389,7 +414,10 @@ const cancelOrder = asyncHandler(async (req, res) => {
 });
 
 const getPublicTrackOrder = asyncHandler(async (req, res) => {
-  const order = await Order.findOne({ orderNumber: req.params.orderNumber }).populate("productId");
+  const order = await Order.findOne({ orderNumber: req.params.orderNumber })
+    .populate("productId")
+    .populate({ path: "farmerId", select: "name" })
+    .populate({ path: "buyerId", select: "name" });
 
   if (!order) {
     res.status(404);

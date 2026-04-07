@@ -33,16 +33,18 @@ const orderStatusMap = {
   pending: 0,
   confirmed: 1,
   shipped: 2,
-  delivered: 3,
-  cancelled: 4,
+  out_for_delivery: 3,
+  delivered: 4,
+  cancelled: 5,
 };
 
 const orderStatusReverseMap = {
   0: "pending",
   1: "confirmed",
   2: "shipped",
-  3: "delivered",
-  4: "cancelled",
+  3: "out_for_delivery",
+  4: "delivered",
+  5: "cancelled",
 };
 
 async function sendContractTransaction(methodBuilder) {

@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const asyncHandler = require("../utils/asyncHandler");
+const { updateOrderStatus: updateOrderStatusOnChain } = require("../services/blockchainService");
 
 // @desc    Update delivery status to out_for_delivery
 // @route   PUT /api/track/status/:id
@@ -18,6 +19,13 @@ const updateDeliveryStatus = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Invalid delivery status transition.");
   }
+
+  // Record on blockchain
+  const blockchainResult = await updateOrderStatusOnChain(order.blockchainOrderId, status);
+  if (!order.blockchainRefs.statusUpdated) {
+    order.blockchainRefs.statusUpdated = {};
+  }
+  order.blockchainRefs.statusUpdated[status] = blockchainResult.receipt.transactionHash;
 
   order.status = status;
   order.statusHistory.push({ status, changedAt: new Date() });

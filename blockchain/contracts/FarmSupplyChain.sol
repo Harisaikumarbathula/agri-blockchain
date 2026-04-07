@@ -18,6 +18,7 @@ contract FarmSupplyChain {
         Pending,
         Confirmed,
         Shipped,
+        OutForDelivery,
         Delivered,
         Cancelled
     }
