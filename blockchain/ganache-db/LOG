@@ -1,9 +1,16 @@
-2026/04/08-01:37:07.360 4f18 Recovering log #25
-2026/04/08-01:37:07.366 4f18 Level-0 table #27: started
-2026/04/08-01:37:07.379 4f18 Level-0 table #27: 447002 bytes OK
-2026/04/08-01:37:07.390 4f18 Delete type=0 #25
-2026/04/08-01:37:07.391 4f18 Delete type=3 #23
-2026/04/08-01:37:07.391 4e1c Compacting 4@0 + 1@1 files
-2026/04/08-01:37:07.431 4e1c Generated table #29@0: 4220 keys, 1126742 bytes
-2026/04/08-01:37:07.431 4e1c Compacted 4@0 + 1@1 files => 1126742 bytes
-2026/04/08-01:37:07.438 4e1c compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/04/08-13:35:10.760 49f0 Recovering log #28
+2026/04/08-13:35:10.764 49f0 Level-0 table #31: started
+2026/04/08-13:35:10.780 49f0 Level-0 table #31: 543149 bytes OK
+2026/04/08-13:35:10.790 49f0 Delete type=2 #16
+2026/04/08-13:35:10.791 49f0 Delete type=2 #18
+2026/04/08-13:35:10.791 49f0 Delete type=2 #21
+2026/04/08-13:35:10.792 49f0 Delete type=2 #24
+2026/04/08-13:35:10.792 49f0 Delete type=2 #27
+2026/04/08-13:35:10.792 49f0 Delete type=0 #28
+2026/04/08-13:35:10.792 49f0 Delete type=3 #26
+2026/04/08-13:40:13.251 16bc Compacting 1@0 + 1@1 files
+2026/04/08-13:40:13.468 16bc Generated table #33@0: 4990 keys, 1351875 bytes
+2026/04/08-13:40:13.469 16bc Compacted 1@0 + 1@1 files => 1351875 bytes
+2026/04/08-13:40:13.475 16bc compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/04/08-13:40:13.476 16bc Delete type=2 #29
+2026/04/08-13:40:13.478 16bc Delete type=2 #31
